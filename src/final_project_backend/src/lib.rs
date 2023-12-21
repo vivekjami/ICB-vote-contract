@@ -13,6 +13,7 @@ enum Choice {
     Reject,
     Pass,
 }
+
 #[derive(Debug, CandidType, Deserialize)]
 enum VoteError {
     AlreadyVoted,
@@ -57,7 +58,7 @@ impl BoundedStorable for Proposal {
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
-    static PROPOSAL_MAP: RefCell<StableBTreeMap < MemoryId , Proposal, Memory >> = RefCell::new(StableBTreeMap::init (MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))));
+    static PROPOSAL_MAP: RefCell<StableBTreeMap<u64, Proposal, Memory>> = RefCell::new (StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))));
 }
 
 #[ic_cdk::query]
@@ -67,12 +68,12 @@ fn get_proposal(key: u64) -> Option<Proposal> {
 
 #[ic_cdk::query]
 fn get_proposal_count() -> u64 {
-    PROPOSAL_MAP.with(|p| p.borrow().len() as u64)
+    PROPOSAL_MAP.with(|p| p.borrow().len())
 }
 
 #[ic_cdk::update]
 fn create_proposal(key: u64, proposal: CreateProposal) -> Option<Proposal> {
-    let value: Proposal = Proposal {
+    let value = Proposal {
         description: proposal.description,
         approve: 0u32,
         reject: 0u32,
@@ -85,7 +86,6 @@ fn create_proposal(key: u64, proposal: CreateProposal) -> Option<Proposal> {
 }
 
 #[ic_cdk::update]
-
 fn edit_proposal(key: u64, proposal: CreateProposal) -> Result<(), VoteError> {
     PROPOSAL_MAP.with(|p| {
         let old_proposal_opt = p.borrow_mut().get(&key);
